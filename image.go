@@ -197,8 +197,9 @@ func (i Image) Create() error {
 	args := []string{"create", "-f", i.Format}
 
 	if len(i.backingFile) > 0 {
-		args = append(args, "-o")
-		args = append(args, fmt.Sprintf("backing_file=%s", i.backingFile))
+		args = append(args, "-F", i.Format)
+		args = append(args, "-b")
+		args = append(args, i.backingFile)
 	}
 
 	args = append(args, i.Path)
