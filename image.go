@@ -27,7 +27,12 @@ type Image struct {
 	Format string // Image format
 	Size   uint64 // Image size in bytes
 
-	backingFile string
+	ClusterSize   uint64
+	ActualSize    uint64
+	BackingFormat string
+	BackingFull   string
+
+	BackingFile string
 	snapshots   []Snapshot
 }
 
@@ -84,8 +89,13 @@ func (i *Image) retreiveInfos() error {
 	type imgInfo struct {
 		Snapshots []snapshotInfo `json:"snapshots"`
 
-		Format string `json:"format"`
-		Size   uint64 `json:"virtual-size"`
+		Format        string `json:"format"`
+		Size          uint64 `json:"virtual-size"`
+		ClusterSize   uint64 `json:"cluster-size"`
+		ActualSize    uint64 `json:"actual-size"`
+		BackingFormat string `json:"backing-filename-format"`
+		Backing       string `json:"backing-filename"`
+		BackingFull   string `json:"full-backing-filename"`
 	}
 
 	var info imgInfo
@@ -104,6 +114,11 @@ func (i *Image) retreiveInfos() error {
 
 	i.Format = info.Format
 	i.Size = info.Size
+	i.ClusterSize = info.ClusterSize
+	i.ActualSize = info.ActualSize
+	i.BackingFormat = info.BackingFormat
+	i.BackingFile = info.Backing
+	i.BackingFull = info.BackingFull
 
 	i.snapshots = make([]Snapshot, 0)
 	for _, snap := range info.Snapshots {
@@ -187,7 +202,7 @@ func (i *Image) SetBackingFile(backingFile string) error {
 		return err
 	}
 
-	i.backingFile = backingFile
+	i.BackingFile = backingFile
 	return nil
 }
 
@@ -196,10 +211,10 @@ func (i *Image) SetBackingFile(backingFile string) error {
 func (i Image) Create() error {
 	args := []string{"create", "-f", i.Format}
 
-	if len(i.backingFile) > 0 {
+	if len(i.BackingFile) > 0 {
 		args = append(args, "-F", i.Format)
 		args = append(args, "-b")
-		args = append(args, i.backingFile)
+		args = append(args, i.BackingFile)
 	}
 
 	args = append(args, i.Path)
@@ -218,7 +233,7 @@ func (i Image) Create() error {
 // Rebase changes the backing file of the image
 // to the specified file path
 func (i *Image) Rebase(backingFile string) error {
-	i.backingFile = backingFile
+	i.BackingFile = backingFile
 
 	cmd := exec.Command("qemu-img", "rebase", "-b", backingFile, i.Path)
 
